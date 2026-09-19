@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>ICU 약물 계산기</title>
+  <style>
+    :root {
+      --primary: #0284c7;
+      --primary-dark: #0369a1;
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --text: #0f172a;
+      --border: #e2e8f0;
+    }
+
+    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background-color: var(--bg); color: var(--text); margin: 0; padding: 12px; display: flex; justify-content: center; }
+    .app { width: 100%; max-width: 480px; background: var(--card); border-radius: 16px; padding: 18px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); }
+    
+    h1 { font-size: 1.2rem; text-align: center; margin: 0 0 14px 0; color: var(--primary-dark); font-weight: 700; }
+    
+    .tabs { display: flex; gap: 4px; margin-bottom: 12px; }
+    .tab { flex: 1; padding: 8px 2px; background: #f1f5f9; border: none; border-radius: 8px; font-weight: 600; font-size: 0.8rem; color: #64748b; cursor: pointer; }
+    .tab.active { background: var(--primary); color: white; }
+
+    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 16px; }
+    .btn { padding: 8px 2px; border: 1px solid var(--border); background: #f8fafc; border-radius: 8px; font-weight: 600; font-size: 0.75rem; cursor: pointer; text-align: center; }
+    .btn.active { background: #e0f2fe; color: var(--primary-dark); border-color: #38bdf8; font-weight: bold; }
+
+    .calc-mode { display: flex; background: #f1f5f9; border-radius: 8px; padding: 3px; margin-bottom: 14px; }
+    .mode-btn { flex: 1; border: none; padding: 6px; font-size: 0.8rem; font-weight: bold; border-radius: 6px; cursor: pointer; background: transparent; color: #64748b; }
+    .mode-btn.active { background: white; color: var(--primary-dark); box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+
+    .group { margin-bottom: 10px; }
+    label { display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 4px; color: #475569; }
+    input, select { width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.95rem; }
+
+    .row { display: flex; gap: 6px; }
+    .row > div { flex: 1; }
+
+    .res-box { margin-top: 16px; padding: 14px; background: #f0f9ff; border-left: 4px solid var(--primary); border-radius: 6px; }
+    .res-title { font-size: 0.8rem; color: #0369a1; font-weight: 600; }
+    .res-val { font-size: 1.3rem; font-weight: 800; color: var(--primary-dark); margin-top: 2px; }
+    .formula-tag { font-size: 0.75rem; color: #64748b; margin-top: 6px; background: #e2e8f0; padding: 4px 8px; border-radius: 4px; display: inline-block; }
+  </style>
+</head>
+<body>
+
+<div class="app">
+  <h1>🏥 ICU Drug Calculator</h1>
+
+  <div class="tabs">
+    <button class="tab active" onclick="setCat('vaso')">Vasopressor/Arrythmia</button>
+    <button class="tab" onclick="setCat('sedative')">Sedatives</button>
+    <button class="tab" onclick="setCat('etc')">Etc/gtt</button>
+  </div>
+
+  <!-- Vasopressors & Antiarrhythmics -->
+  <div class="grid" id="g-vaso">
+    <button class="btn active" onclick="setDrug('INEPI_5A')">INEPI (5A)</button>
+    <button class="btn" onclick="setDrug('INEPI_1A')">INEPI (1A)</button>
+    <button class="btn" onclick="setDrug('INEPI_MED')">INEPI (내과)</button>
+    <button class="btn" onclick="setDrug('IPHENYL')">Phenylephrine</button>
+    <button class="btn" onclick="setDrug('IADH')">IADH</button>
+    <button class="btn" onclick="setDrug('IEPI')">IEPI</button>
+    <button class="btn" onclick="setDrug('IDOBU')">IDOBU</button>
+    <button class="btn" onclick="setDrug('IDOPA')">IDOPA</button>
+    <button class="btn" onclick="setDrug('INICA')">INICA</button>
+    <button class="btn" onclick="setDrug('IAMIOD')">IAMIOD</button>
+    <button class="btn" onclick="setDrug('IDIL')">IDIL</button>
+  </div>
+
+  <!-- Sedatives & Muscle Relaxants -->
+  <div class="grid" id="g-sedative" style="display:none;">
+    <button class="btn" onclick="setDrug('I2POF')">I2POF</button>
+    <button class="btn" onclick="setDrug('IDMDT')">IDMDT</button>
+    <button class="btn" onclick="setDrug('IFENT')">IFENT</button>
+    <button class="btn" onclick="setDrug('IRFENT')">IRFENT</button>
+    <button class="btn" onclick="setDrug('IMIDA')">IMIDA</button>
+    <button class="btn" onclick="setDrug('IVECU')">IVECU</button>
+    <button class="btn" onclick="setDrug('ITRAX')">ITRAX</button>
+  </div>
+
+  <!-- Others -->
+  <div class="grid" id="g-etc" style="display:none;">
+    <button class="btn" onclick="setDrug('INTG')">INTG</button>
+    <button class="btn" onclick="setDrug('gtt')">gtt/min</button>
+    <button class="btn" onclick="setDrug('custom')">Custom Input</button>
+  </div>
+
+  <div class="calc-mode" id="modeContainer">
+    <button class="mode-btn active" id="m-rate" onclick="setMode('rate')">Rate (mL/hr)</button>
+    <button class="mode-btn" id="m-dose" onclick="setMode('dose')">Dose Reverse</button>
+  </div>
+
+  <form oninput="calc()">
+    <div class="group" id="grp-w">
+      <label>Patient Weight (kg)</label>
+      <input type="number" id="w" step="0.1" value="60">
+    </div>
+
+    <div class="row" id="grp-mix">
+      <div class="group">
+        <label>Drug Amount</label>
+        <div class="row">
+          <input type="number" id="dA" step="0.01" value="20">
+          <select id="dU" style="width:75px;">
+            <option value="mg">mg</option>
+            <option value="mcg">mcg</option>
+            <option value="g">g</option>
+            <option value="unit">unit</option>
+          </select>
+        </div>
+      </div>
+      <div class="group">
+        <label>Fluid Vol (mL)</label>
+        <input type="number" id="fV" value="200">
+      </div>
+    </div>
+
+    <div class="group" id="grp-dose">
+      <label id="lbl-dose">Dose (mcg/kg/min)</label>
+      <input type="number" id="dose" step="0.001" value="0.05">
+    </div>
+
+    <div class="group" id="grp-rate" style="display:none;">
+      <label>Rate (mL/hr)</label>
+      <input type="number" id="rate" step="0.1" value="3.6">
+    </div>
+
+    <div class="group" id="grp-gtt" style="display:none;">
+      <label>Drop Factor (gtt/mL)</label>
+      <select id="drop">
+        <option value="20">20 gtt/mL</option>
+        <option value="60">60 gtt/mL</option>
+        <option value="15">15 gtt/mL</option>
+      </select>
+    </div>
+  </form>
+
+  <div class="res-box">
+    <div class="res-title" id="r-title">Infusion Rate</div>
+    <div class="res-val" id="r-val">0 mL/hr</div>
+    <div class="formula-tag" id="r-formula">Formula: -</div>
+  </div>
+</div>
+
+<script>
+  let curDrug = 'INEPI_5A';
+  let curMode = 'rate';
+
+  const drugs = {
+    // Vasopressors & Antiarrhythmics
+    INEPI_5A: { w: true, unit: 'mcg/kg/min', dA: 20, dU: 'mg', fV: 200, dose: 0.05, t: 'min', formula: '0.6 × Dose × kg' }, // INEPI4(5A)+I5DW2P1
+    INEPI_1A: { w: true, unit: 'mcg/kg/min', dA: 4, dU: 'mg', fV: 200, dose: 0.05, t: 'min', formula: '3 × Dose × kg (Peri line)' }, // INEPI4(1A)+I5DW2P1
+    INEPI_MED: { w: true, unit: 'mcg/kg/min', dA: 16, dU: 'mg', fV: 500, dose: 0.05, t: 'min', formula: '1.875 × Dose × kg (4A + 5DW 500mL)' }, // INEPI4(4A)+I5DW5P
+    IPHENYL: { w: true, unit: 'mcg/kg/min', dA: 10, dU: 'mg', fV: 500, dose: 0.1, t: 'min', formula: '3 × Dose × kg (1A + 5DW 500mL)' }, // Phenylephrine 1A + 500mL
+    IADH: { w: false, unit: 'unit/min', dA: 20, dU: 'unit', fV: 100, dose: 0.01, t: 'min', formula: '0.01 unit/min = 3 mgtt' },
+    IEPI: { w: true, unit: 'mcg/kg/min', dA: 12, dU: 'mg', fV: 200, dose: 0.05, t: 'min', formula: '1 × Dose × kg' },
+    IDOBU: { w: true, unit: 'mcg/kg/min', dA: 1000, dU: 'mg', fV: 500, dose: 5, t: 'min', formula: '0.03 × Dose × kg' },
+    IDOPA: { w: true, unit: 'mcg/kg/min', dA: 1250, dU: 'mg', fV: 250, dose: 5, t: 'min', formula: 'IDOPA85(1BAG)+IDOPA41(2A)' },
+    INICA: { w: true, unit: 'mcg/kg/min', dA: 200, dU: 'mg', fV: 50, dose: 0.5, t: 'min', formula: '0.15 × Dose × kg' },
+    IAMIOD: { w: false, unit: 'mg/hr', dA: 900, dU: 'mg', fV: 500, dose: 32, t: 'hr', formula: '32 ⇨ 16 mgtt' },
+    IDIL: { w: false, unit: 'mg/hr', dA: 200, dU: 'mg', fV: 200, dose: 10, t: 'hr', formula: 'Loading: IDIL50(0.4V)+NS 50mL' },
+
+    // Sedatives & Muscle Relaxants
+    I2POF: { w: true, unit: 'mg/kg/hr', dA: 500, dU: 'mg', fV: 50, dose: 1, t: 'hr', formula: '0.05 × Dose × kg' },
+    IDMDT: { w: true, unit: 'mcg/kg/hr', dA: 200, dU: 'mcg', fV: 50, dose: 0.5, t: 'hr', formula: '0.25 × Dose × kg' },
+    IFENT: { w: true, unit: 'mcg/kg/hr', dA: 2000, dU: 'mcg', fV: 50, dose: 1, t: 'hr', formula: '0.025 × Dose × kg' },
+    IRFENT: { w: true, unit: 'mcg/kg/min', dA: 10, dU: 'mg', fV: 100, dose: 0.05, t: 'min', formula: '0.6 × Dose × kg' },
+    IMIDA: { w: true, unit: 'mg/kg/hr', dA: 100, dU: 'mg', fV: 100, dose: 0.05, t: 'hr', formula: '1 × Dose × kg' },
+    IVECU: { w: true, unit: 'mcg/kg/min', dA: 100, dU: 'mg', fV: 100, dose: 0.08, t: 'min', formula: '0.06 × Dose × kg' },
+    ITRAX: { w: false, unit: 'mg/hr', dA: 250, dU: 'mg', fV: 500, dose: 10, t: 'hr', formula: 'Loading: ITRAX51(1A)+NS 50mL' },
+
+    // Others
+    INTG: { w: false, unit: 'mcg/min', dA: 50, dU: 'mg', fV: 250, dose: 10, t: 'min', formula: 'INTG 50mg + 250mL' },
+    gtt: { w: false, unit: 'mL/hr', dA: 0, dU: 'mg', fV: 1000, dose: 100, t: 'hr', formula: 'gtt/min Calculation' },
+    custom: { w: true, unit: 'mcg/kg/min', dA: 100, dU: 'mg', fV: 100, dose: 1, t: 'min', formula: 'Custom' }
+  };
+
+  function setCat(cat) {
+    document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+    event.target.classList.add('active');
+    document.getElementById('g-vaso').style.display = cat==='vaso'?'grid':'none';
+    document.getElementById('g-sedative').style.display = cat==='sedative'?'grid':'none';
+    document.getElementById('g-etc').style.display = cat==='etc'?'grid':'none';
+    if(cat==='vaso') setDrug('INEPI_5A');
+    if(cat==='sedative') setDrug('I2POF');
+    if(cat==='etc') setDrug('INTG');
+  }
+
+  function setDrug(key) {
+    curDrug = key;
+    document.querySelectorAll('.btn').forEach(b => b.classList.remove('active'));
+    if(event && event.target && event.target.classList.contains('btn')) event.target.classList.add('active');
+    
+    const p = drugs[key];
+    document.getElementById('dA').value = p.dA;
+    document.getElementById('dU').value = p.dU;
+    document.getElementById('fV').value = p.fV;
+    document.getElementById('dose').value = p.dose;
+    document.getElementById('lbl-dose').innerText = `Dose (${p.unit})`;
+    document.getElementById('r-formula').innerText = `Formula: ${p.formula}`;
+
+    const isGtt = key === 'gtt';
+    document.getElementById('grp-mix').style.display = isGtt ? 'none' : 'flex';
+    document.getElementById('grp-gtt').style.display = isGtt ? 'block' : 'none';
+    document.getElementById('grp-w').style.display = (!isGtt && p.w) ? 'block' : 'none';
+    document.getElementById('modeContainer').style.display = isGtt ? 'none' : 'flex';
+
+    calc();
+  }
+
+  function setMode(mode) {
+    curMode = mode;
+    document.getElementById('m-rate').classList.toggle('active', mode==='rate');
+    document.getElementById('m-dose').classList.toggle('active', mode==='dose');
+    document.getElementById('grp-dose').style.display = mode==='rate' ? 'block' : 'none';
+    document.getElementById('grp-rate').style.display = mode==='dose' ? 'block' : 'none';
+    calc();
+  }
+
+  function calc() {
+    const w = parseFloat(document.getElementById('w').value) || 0;
+    let dA = parseFloat(document.getElementById('dA').value) || 0;
+    const dU = document.getElementById('dU').value;
+    const fV = parseFloat(document.getElementById('fV').value) || 0;
+    const targetDose = parseFloat(document.getElementById('dose').value) || 0;
+    const inputRate = parseFloat(document.getElementById('rate').value) || 0;
+    const drop = parseFloat(document.getElementById('drop').value) || 20;
+
+    const rVal = document.getElementById('r-val');
+    const rTitle = document.getElementById('r-title');
+
+    if (curDrug === 'gtt') {
+      rTitle.innerText = "gtt/min";
+      const gtt = (targetDose * drop) / 60;
+      rVal.innerText = `${gtt.toFixed(1)} gtt/min (${(60/gtt).toFixed(1)} sec/drop)`;
+      return;
+    }
+
+    if (fV <= 0 || dA <= 0) { rVal.innerText = 'Check input'; return; }
+
+    const p = drugs[curDrug];
+    let totalBase = dA;
+    if (dU === 'mg') totalBase = dA * 1000;
+    if (dU === 'g') totalBase = dA * 1000000;
+    if (p.unit.startsWith('mg') && dU === 'mg') totalBase = dA;
+
+    const conc = totalBase / fV;
+    const tMult = (p.t === 'min') ? 60 : 1;
+
+    if (curMode === 'rate') {
+      rTitle.innerText = "Infusion Rate";
+      let rate = p.w ? (targetDose * w * tMult) / conc : (targetDose * tMult) / conc;
+      rVal.innerText = `${rate.toFixed(2)} mL/hr`;
+    } else {
+      rTitle.innerText = `Calculated Dose (${p.unit})`;
+      let dose = p.w ? (inputRate * conc) / (w * tMult) : (inputRate * conc) / tMult;
+      rVal.innerText = `${dose.toFixed(4)} ${p.unit}`;
+    }
+  }
+
+  calc();
+</script>
+</body>
+</html>
