@@ -1,0 +1,22 @@
+{
+  "name": "ICU 약물 계산기",
+  "short_name": "ICU 계산기",
+  "description": "중환자실 간호사를 위한 약물 및 의료 계산기",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2563eb",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
